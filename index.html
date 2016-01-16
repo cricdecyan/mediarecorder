@@ -462,7 +462,8 @@ function testRecordRemotePeerConnection() {
           timeStamps.push(event.timeStamp);
           videoSize += event.data.size;
         };
-        //recorder.start();
+        console.log('Starting MediaRecorder');
+        recorder.start();
       })
       .then(function() {
         return waitFor('Making sure the recording has data',
