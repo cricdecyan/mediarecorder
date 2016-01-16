@@ -459,6 +459,7 @@ function testRecordRemotePeerConnection() {
       })
       .then(function(recorder) {
         recorder.ondataavailable = function(event) {
+          console.log('incoming data...');
           timeStamps.push(event.timeStamp);
           videoSize += event.data.size;
         };
