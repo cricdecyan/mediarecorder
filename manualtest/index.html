@@ -387,7 +387,7 @@ function recorderEventHandlersAction(action, eventName) {
   events.forEach(function(event) {
       if (action == 'remove') {
         theRecorder[event] = null;
-        computeAndDisplayEventCount(event, 0);
+        computeAndDisplayEventCount(event, true);
       } else {
         theRecorder[event] = function() {computeAndDisplayEventCount(event);};
       }
@@ -395,13 +395,12 @@ function recorderEventHandlersAction(action, eventName) {
 }
 
 // This function computes and displays the recorder events counts.
-function computeAndDisplayEventCount(eventName, initValue) {
+function computeAndDisplayEventCount(eventName, initialize) {
   // TODO(cpaulin): see if this can be used for more than the event counts.
-  if (eventCounter[eventName]) {
+  if (initialize) {
+    eventCounter[eventName] = 0;
+  } else if (eventCounter[eventName]) {
     eventCounter[eventName] += 1;
-  } else if (initValue) {
-    console
-    eventCounter[eventName] = initValue;
   } else {
     eventCounter[eventName] = 1;
   }
