@@ -29,19 +29,19 @@
   </select>
   <br></br>
   <button onclick="getUserMedia();">GetUSerMedia</button>
-  <button onclick="stopStream(localStream);">StopLocalStream</button>
-  <button onclick="stopStream(localStream, 'video');">StopLocalVideoTrack
+  <button onclick="stopStream(theLocalStream);">StopLocalStream</button>
+  <button onclick="stopStream(theLocalStream, 'video');">StopLocalVideoTrack
   </button>
-  <button onclick="stopStream(localStream, 'audio');">StopLocalAudioTracks
+  <button onclick="stopStream(theLocalStream, 'audio');">StopLocalAudioTracks
   </button>
-  <button onclick="stopStream(remoteStream);">StopRemoteStream</button>
-  <button onclick="stopStream(remoteStream, 'video');">StopRemoteVideoTrack
+  <button onclick="stopStream(theRemoteStream);">StopRemoteStream</button>
+  <button onclick="stopStream(theRemoteStream, 'video');">StopRemoteVideoTrack
   </button>
-  <button onclick="stopStream(remoteStream, 'audio');">StopRemoteAudioTracks
+  <button onclick="stopStream(theRemoteStream, 'audio');">StopRemoteAudioTracks
   </button>
   <br></br>
   <br>Remote Peer Connection</br>
-  <button onclick="setupPeerConnection();">SetUpPeerConnection</button>
+  <button onclick="createPeerConnection();">CreatePeerConnection</button>
   <br></br>
   <br>Recorder Options</br>
   <label>Stream To Record</label>
@@ -173,7 +173,8 @@
 <script>
 
 'use strict';
-var localStream = null;
+var theLocalStream = null;
+var theRemoteStream = null;
 
 function getSelectedValue(id) {
   var e = document.getElementById(id);
@@ -219,7 +220,7 @@ function getUserMedia() {
  navigator.mediaDevices.getUserMedia(constraints)
     .then(function(stream) {
       document.getElementById('localVideo').src = URL.createObjectURL(stream);
-      localStream = stream;
+      theLocalStream = stream;
     });
 }
 
@@ -296,9 +297,16 @@ function assertThrows(func, description) {
   }
 }
 
-function setupPeerConnection() {
+function createPeerConnection(stream) {
+  setupPeerConnection(theLocalStream)
+      .then(function(stream) {
+        theRemoteStream = stream;
+      });
+}
+
+function setupPeerConnection(stream) {
   return new Promise(function(resolve, reject) {
-    var remoteStream = null;
+    var localStream = stream;
     var localPeerConnection = new webkitRTCPeerConnection(null);
     var remotePeerConnection = new webkitRTCPeerConnection(null);
 
@@ -310,7 +318,7 @@ function setupPeerConnection() {
     }
 
     if (!localStream)
-      reject('No localStream initialized!!');
+      reject('Stream not initialized!!');
 
     localPeerConnection.onicecandidate = function(event) {
       if (event.candidate) {
