@@ -5,8 +5,8 @@
 </head>
 <body>
   <div> Record Real-Time video test.</div>
-  <video id="localVideo" autoplay></video>
-  <video id="remoteVideo" autoplay></video>
+  <video id="local_video" autoplay></video>
+  <video id="remote_video" autoplay></video>
   <br><strong>GetUserMedia Options</strong></br>
   <label>Enable Audio</label>
   <select id="enable_audio">
@@ -40,7 +40,7 @@
   <button onclick="stopStream(theRemoteStream, 'audio');">StopRemoteAudioTracks
   </button>
   <br></br>
-  <br><strong>Remote Peer Connection</strong></br>
+  <br><strong>Local Peer Connection</strong></br>
   <button onclick="createPeerConnection();">CreatePeerConnection</button>
   <br></br>
   <br><strong>Recorder Options</strong></br>
@@ -115,7 +115,6 @@
     <option value="all">all events</option>
     <option value="onstart">onstart</option>
     <option value="onstop">onstop</option>
-    <option value="ondataavailable">ondataavailable</option>
     <option value="onpause">onpause</option>
     <option value="onresume">onresume</option>
     <option value="onerror">onerror</option>
@@ -142,10 +141,10 @@
   <button onclick="requestDataRecorder();">RequestData</button>
   <br></br>
   <br><strong>Playback Controls</strong></br>
-  <video id="playbackVideo" autoplay></video>
+  <button onclick="playback();">Playback</button>
+  <button onclick="download();">Download</button>
   <br>
-    <button onclick="playback();">Playback</button>
-    <button onclick="download();">Download</button>
+    <video id="playback_video" autoplay></video>
   </br>
   <br><strong>Recorder State</strong></br>
   <label>RecorderState: </label>
@@ -172,9 +171,12 @@ var theLocalStream = null;
 var theRemoteStream = null;
 var theRecorder = null;
 var eventsMonitored = null;
-var RECORDER_EVENTS = ['onstart', 'onpause', 'onresume', 'onstop', 'onerror',
-    'ondataavailable'];
-var eventCounter = {};
+// Note: ondataavailable is not in the list below because it is necessary to
+// have it always on if we ever want to playbabk/download the recording in a
+// consistent manner.
+var RECORDER_EVENTS = ['onstart', 'onpause', 'onresume', 'onstop', 'onerror'];
+var eventCounter;
+var recordedData;
 
 // This function gets the selected value of a <select> element.
 function getSelectedValue(id) {
@@ -207,7 +209,7 @@ function buildConstraints(audioEnabled, videoEnabled, resolution) {
 }
 
 // This function returns true if the string provided is equal to 'true'.
-// Otherwise it returns 'false'.
+// Otherwise it returns false.
 function isTrue(someString) {
  if (someString == 'true') {
    return true;
@@ -217,7 +219,7 @@ function isTrue(someString) {
 }
 
 // This function performs a gUM request and populates the local stream as
-// well as the localVideo tag.
+// well as the local_video tag.
 function getUserMedia() {
  var enableAudio = isTrue(getSelectedValue('enable_audio'));
  var enableVideo = isTrue(getSelectedValue('enable_video'));
@@ -226,7 +228,7 @@ function getUserMedia() {
 
  navigator.mediaDevices.getUserMedia(constraints)
     .then(function(stream) {
-      document.getElementById('localVideo').src = URL.createObjectURL(stream);
+      document.getElementById('local_video').src = URL.createObjectURL(stream);
       theLocalStream = stream;
     });
 }
@@ -286,10 +288,11 @@ function buildRecorderConfig() {
 }
 
 
-// This function creates the media recorder instance and configures
-// the ignoreMutedMedia parameter.
+// This function creates the media recorder instance, configures the
+// ignoreMutedMedia parameter and sets a handler to save the recording.
 function createRecorder() {
   var config = buildRecorderConfig();
+  var ON_DATA_AVAILABLE = 'ondataavailable';
   if (!config) {
     alert('Cannot create recorder without a stream!');
     return;
@@ -301,6 +304,11 @@ function createRecorder() {
       .then(function(recorder) {
         theRecorder = recorder;
         theRecorder.ignoreMutedMedia = ignoreMutedMedia;
+        theRecorder[ON_DATA_AVAILABLE] = function(event) {
+            computeAndDisplayEventCount(ON_DATA_AVAILABLE);
+            if (event.data && event.data.size > 0) {
+              recordedData.push(event.data);
+            }};
         // Keep track of recorder state in UI every 500ms.
         setInterval(function() {displayRecorderState();}, 500);
       });
@@ -314,6 +322,8 @@ function startRecorder() {
     alert('Recorder not initialized!');
     return;
   }
+  recordedData = [];
+  eventCounter = {};
   var timeSlice = getSelectedValue('time_slice');
   if (timeSlice) {
     theRecorder.start(timeSlice);
@@ -404,7 +414,6 @@ function computeAndDisplayEventCount(eventName, initialize) {
   } else {
     eventCounter[eventName] = 1;
   }
-  console.log(eventName + '_count:', eventCounter[eventName]);
   document.getElementById(eventName + '_count').value = eventCounter[eventName];
 }
 
@@ -413,6 +422,34 @@ function displayRecorderState() {
   document.getElementById('recorder_state').value = theRecorder.state;
 }
 
+// This function playsback the recording.
+function playback() {
+  if (!recordedData.length) {
+    alert('No recording found!');
+    return;
+  }
+  var videoBlob = new Blob(recordedData, {type: 'video/webm'});
+  playback_video.src = window.URL.createObjectURL(videoBlob);
+}
+
+function download() {
+  if (!recordedData.length) {
+    alert('No recording found!');
+    return;
+  }
+  var videoBlob = new Blob(recordedData, {type: 'video/webm'});
+  var url = window.URL.createObjectURL(videoBlob);
+  var downloader = document.createElement('a');
+  downloader.style.display = 'none';
+  downloader.href = url;
+  downloader.download = 'test.webm';
+  document.body.appendChild(downloader);
+  downloader.click();
+  setTimeout(function() {
+    document.body.removeChild(downloader);
+    window.URL.revokeObjectURL(url);
+  }, 100);
+}
 // This function creates the local peer connection and saves the
 // remote stream object.
 function createPeerConnection(stream) {
@@ -461,7 +498,7 @@ function setupPeerConnection(stream) {
       }
     };
     remotePeerConnection.onaddstream = function(event) {
-      document.getElementById('remoteVideo').src = URL.createObjectURL(
+      document.getElementById('remote_video').src = URL.createObjectURL(
           event.stream);
       remoteStream = event.stream;
       resolve(remoteStream);
