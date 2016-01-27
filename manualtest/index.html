@@ -386,9 +386,12 @@ function recorderEventHandlersAction(action, eventName) {
   }
   events.forEach(function(event) {
       if (action == 'remove') {
-        theRecorder[event] = computeAnddisplayEventCount.bind(null, event, 0)
+        nameOfEvent = event;
+        theRecorder[event] = computeAnddisplayEventCount.bind(null,
+            nameOfEvent, 0);
       } else {
-        theRecorder[event] = computeAnddisplayEventCount.bind(null, event);
+        theRecorder[event] = computeAnddisplayEventCount.bind(null,
+            nameOfEvent);
       }
   });
 }
@@ -403,6 +406,7 @@ function computeAnddisplayEventCount(eventName, initValue) {
   } else {
     eventCounter[eventName] = 1;
   }
+  console.log(eventName + '_count:', eventCounter[eventName]);
   document.getElementById(eventName + '_count').value = eventCounter[eventName];
 }
 
