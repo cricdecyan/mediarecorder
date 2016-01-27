@@ -109,10 +109,10 @@
   <br></br>
   <br><strong>Recorder Controls</strong></br>
   <button onclick="createRecorder();">CreateRecorder</button>
-  <label>Monitor Recorder Event</label>
+  <label>Monitor Recorder's Event Counts</label>
   <select id="monitor_events" onchange="monitorRecorderEvents(this.value);">
     <option value=""></option>
-    <option value="all events">all events</option>
+    <option value="all">all events</option>
     <option value="onstart">onstart</option>
     <option value="onstop">onstop</option>
     <option value="ondataavailable">ondataavailable</option>
@@ -139,7 +139,7 @@
   <button onclick="pauseRecorder();">Pause</button>
   <button onclick="resumeRecorder();">Resume</button>
   <button onclick="stopRecorder();">Stop</button>
-  <button onclick="requestData();">RequestData</button>
+  <button onclick="requestDataRecorder();">RequestData</button>
   <br></br>
   <br><strong>Playback Controls</strong></br>
   <video id="playbackVideo" autoplay></video>
@@ -148,20 +148,22 @@
     <button onclick="download();">Download</button>
   </br>
   <br><strong>Recorder State</strong></br>
-  <textarea id="recorder_state" readonly></textarea>
-  <br><strong>Recorder Events</strong></br>
-  <label>onstart</label>
-  <textarea id="onstart_count" readonly></textarea>
-  <label>onstop</label>
-  <textarea id="onstop_count" readonly></textarea>
-  <label>onpause</label>
-  <textarea id="onpause_count" readonly></textarea>
-  <label>onresume</label>
-  <textarea id="onresume_count" readonly></textarea>
-  <label>ondataavailable</label>
-  <textarea id="ondataavailable_count" readonly></textarea>
-  <label>onerror</label>
-  <textarea id="onerror_count" readonly></textarea>
+  <label>RecorderState: </label>
+  <textarea id="recorder_state" readonly rows=1 cols=10>N/A</textarea>
+  <br></br>
+  <br><strong>Recorder's Event Counters</strong></br>
+  <label>onstart: </label>
+  <textarea id="onstart_count" readonly rows=1 cols=10>0</textarea>
+  <label>onstop: </label>
+  <textarea id="onstop_count" readonly rows=1 cols=10>0</textarea>
+  <label>onpause: </label>
+  <textarea id="onpause_count" readonly rows=1 cols=10>0</textarea>
+  <label>onresume: </label>
+  <textarea id="onresume_count" readonly rows=1 cols=10>0</textarea>
+  <label>ondataavailable: </label>
+  <textarea id="ondataavailable_count" readonly rows=1 cols=10>0</textarea>
+  <label>onerror: </label>
+  <textarea id="onerror_count" readonly rows=1 cols=10>0</textarea>
 </body>
 <script>
 
@@ -234,8 +236,10 @@ function getUserMedia() {
 function stopStream(stream, tracksType) {
   return new Promise(function(resolve, reject) {
     var tracks = null;
-    if (!stream)
-      reject('Stream is not initialized!');
+    if (!stream) {
+      alert('Stream is not initialized!');
+      reject();
+    }
     if (tracksType == 'video') {
       tracks = stream.getVideoTracks();
     } else if (tracksType == 'audio') {
@@ -251,7 +255,6 @@ function stopStream(stream, tracksType) {
 }
 
 // This function builds the media recorder's configuration.
-// This entails initialization parameters as well as time slice.
 function buildRecorderConfig() {
   var options = {};
   var stream = getSelectedValue('recorded_stream');
@@ -288,35 +291,94 @@ function buildRecorderConfig() {
 function createRecorder() {
   var config = buildRecorderConfig();
   if (!config) {
-    console.log('Cannot create recorder on empty config');
+    alert('Cannot create recorder without a stream!');
     return;
   }
   var stream = config[0];
   var options = config[1];
   var ignoreMutedMedia = isTrue(getSelectedValue('ignore_muted'));
-  createMediaRecorder(stream, options)
+  createMediaRecorderInstance(stream, options)
       .then(function(recorder) {
         theRecorder = recorder;
         theRecorder.ignoreMutedMedia = ignoreMutedMedia;
+        // Keep track of recorder state in UI every 500ms.
+        setInterval(function() {displayRecorderState();}, 500);
       });
 }
 
-// This function configurea the event handlers of media recorder.
+// This function starts the media recorder.
+// If a time slice is selected, the function will configure the
+// recorder time slice when starting recorder.
+function startRecorder() {
+  if (!theRecorder) {
+    alert('Recorder not initialized!');
+    return;
+  }
+  var timeSlice = getSelectedValue('time_slice');
+  if (timeSlice) {
+    theRecorder.start(timeSlice);
+  } else {
+    theRecorder.start();
+  }
+  displayRecorderState();
+}
+
+// This function pauses the media recorder.
+function pauseRecorder() {
+  if (!theRecorder) {
+    alert('Recorder not initialized!');
+    return;
+  }
+  theRecorder.pause();
+  displayRecorderState();
+}
+
+// This function resumes the media recorder.
+function resumeRecorder() {
+  if (!theRecorder) {
+    alert('Recorder not initialized!');
+    return;
+  }
+  theRecorder.resume();
+  displayRecorderState();
+}
+
+// This function stops the media recorder.
+function stopRecorder() {
+  if (!theRecorder) {
+    alert('Recorder not initialized!');
+    return;
+  }
+  theRecorder.stop();
+  displayRecorderState();
+}
+
+// This function requests a blob from media recorder.
+function requestDataRecorder() {
+  if (!theRecorder) {
+    alert('Recorder not initialized!');
+    return;
+  }
+  theRecorder.requestData();
+}
+
+// This function configures the event handlers of media recorder.
 function monitorRecorderEvents(eventName) {
   if (!theRecorder) {
-    console.log('No recorder initialized!');
+    alert('No recorder initialized!');
     return;
   }
   if (eventsMonitored) {
     recorderEventHandlersAction('remove', eventsMonitored);
   }
+  if (eventName)
+    recorderEventHandlersAction('add', eventName);
   eventsMonitored = eventName;
-  recorderEventHandlersAction('add', eventName);
 }
 
 // This function adds/removes the recorder's event handlers.
 function recorderEventHandlersAction(action, eventName) {
-  var events = null;
+  var events = [];
   if (eventName == 'all') {
     events = RECORDER_EVENTS;
   } else {
@@ -324,35 +386,49 @@ function recorderEventHandlersAction(action, eventName) {
   }
   events.forEach(function(event) {
       if (action == 'remove') {
-        theRecorder[event] = null;
+        theRecorder[event] = computeAnddisplayEventCount.bind(null, event, 0)
       } else {
-        theRecorder[event] = displayEvent.bind(null, event);
+        theRecorder[event] = computeAnddisplayEventCount.bind(null, event);
       }
   });
-  if (action == 'remove') {
-    // Reset the event counter after all events handlers are flushed.
-    eventCounter = {};
-  }
 }
 
-// This function displays the event count in the event section of webpage.
-function displayEvent(eventName) {
+// This function computes and displays the recorder events counts.
+function computeAnddisplayEventCount(eventName, initValue) {
   // TODO(cpaulin): see if this can be used for more than the event counts.
   if (eventCounter[eventName]) {
     eventCounter[eventName] += 1;
+  } else if (initValue) {
+    eventCounter[eventName] = initValue;
   } else {
     eventCounter[eventName] = 1;
   }
   document.getElementById(eventName + '_count').value = eventCounter[eventName];
 }
 
+// This function displays the mnedia recoder's state.
+function displayRecorderState() {
+  document.getElementById('recorder_state').value = theRecorder.state;
+}
+
+// This function creates the local peer connection and saves the
+// remote stream object.
 function createPeerConnection(stream) {
+  if (!theLocalStream) {
+    alert('No local stream initialized!');
+    return;
+  }
   setupPeerConnection(theLocalStream)
       .then(function(stream) {
         theRemoteStream = stream;
+      })
+      .catch(function(error) {
+        alert('Peer Connection setup failed: ' + error);
       });
 }
 
+// This function is called by createPeerConnection and is responsible for the
+// actual setting of the local peer connection.
 function setupPeerConnection(stream) {
   return new Promise(function(resolve, reject) {
     var localStream = stream;
@@ -399,22 +475,9 @@ function setupPeerConnection(stream) {
   });
 }
 
-function createAndStartMediaRecorder(stream, mimeType, slice) {
-  return new Promise(function(resolve, reject) {
-    document.getElementById('video').src = URL.createObjectURL(stream);
-    var recorder = new MediaRecorder(stream, {'mimeType' : mimeType});
-    console.log('Recorder object created.');
-    if (slice != undefined) {
-      recorder.start(slice);
-      console.log('Recorder started with time slice', slice);
-    } else {
-      recorder.start();
-    }
-    resolve(recorder);
-  });
-}
 
-function createMediaRecorder(stream, options) {
+// This function creates a media recorder instance.
+function createMediaRecorderInstance(stream, options) {
   return new Promise(function(resolve, reject) {
     var recorder = new MediaRecorder(stream, options);
     console.log('Recorder object created.');
