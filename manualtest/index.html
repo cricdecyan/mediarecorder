@@ -29,12 +29,16 @@
   </select>
   <br></br>
   <button onclick="getUserMedia();">GetUSerMedia</button>
-  <button onclick="stopLocalStream();">StopLocalStream</button>
-  <button onclick="stopLocalVideoTrack();">StopLocalVideoTrack</button>
-  <button onclick="stopLocalAudioTracks();">StopLocalAudioTracks</button>
-  <button onclick="stopRemoteStream();">StopRemoteStream</button>
-  <button onclick="stopRemoteVideoTrack();">StopRemoteVideoTrack</button>
-  <button onclick="stopRemoteAudioTracks();">StopRemoteAudioTracks</button>
+  <button onclick="stopStream(localStream);">StopLocalStream</button>
+  <button onclick="stopStream(localStream, 'video');">StopLocalVideoTrack
+  </button>
+  <button onclick="stopStream(localStream, 'audio');">StopLocalAudioTracks
+  </button>
+  <button onclick="stopStream(remoteStream);">StopRemoteStream</button>
+  <button onclick="stopStream(remoteStream, 'video');">StopRemoteVideoTrack
+  </button>
+  <button onclick="stopStream(remoteStream, 'audio');">StopRemoteAudioTracks
+  </button>
   <br></br>
   <br>Remote Peer Connection</br>
   <button onclick="setupPeerConnection();">SetUpPeerConnection</button>
@@ -219,13 +223,26 @@ function getUserMedia() {
     });
 }
 
+function stopStream(stream, tracksType) {
+  return new Promise(function(resolve, reject) {
+    var tracks = null;
+    if (!stream)
+      reject('Stream is not initialized!');
+    if (tracksType == 'video') {
+      tracks = stream.getVideoTracks();
+    } else if (tracksType == 'audio') {
+      tracks = stream.getAudioTracks();
+    } else {
+      tracks = stream.getTracks();
+    }
+    tracks.forEach(function(track) {
+        track.stop();
+    });
+    resolve();
+  });
+}
+
 // This test must be run with experimental GetUserMedia flag on.
-
-// The testcases are identical to the media recorder content browser test.
-// Helper functions like failTest etc are implemented so they map to the
-// CrOS test environment.
-
-// Begin cros related code.
 
 var testProgress = 0;
 var result;
@@ -291,6 +308,9 @@ function setupPeerConnection() {
         localPeerConnection.setRemoteDescription(description);
       });
     }
+
+    if (!localStream)
+      reject('No localStream initialized!!');
 
     localPeerConnection.onicecandidate = function(event) {
       if (event.candidate) {
