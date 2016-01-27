@@ -385,13 +385,11 @@ function recorderEventHandlersAction(action, eventName) {
     events = [eventName];
   }
   events.forEach(function(event) {
-      var nameOfEvent = event;
       if (action == 'remove') {
-        theRecorder[event] = computeAnddisplayEventCount.bind(null,
-            nameOfEvent, 0);
+        theRecorder[event] = function() {computeAnddisplayEventCount(event,
+            0);};
       } else {
-        theRecorder[event] = computeAnddisplayEventCount.bind(null,
-            nameOfEvent);
+        theRecorder[event] = function() {computeAnddisplayEventCount(event);};
       }
   });
 }
@@ -402,6 +400,7 @@ function computeAnddisplayEventCount(eventName, initValue) {
   if (eventCounter[eventName]) {
     eventCounter[eventName] += 1;
   } else if (initValue) {
+    console
     eventCounter[eventName] = initValue;
   } else {
     eventCounter[eventName] = 1;
