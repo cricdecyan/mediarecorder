@@ -385,8 +385,8 @@ function recorderEventHandlersAction(action, eventName) {
     events = [eventName];
   }
   events.forEach(function(event) {
+      var nameOfEvent = event;
       if (action == 'remove') {
-        nameOfEvent = event;
         theRecorder[event] = computeAnddisplayEventCount.bind(null,
             nameOfEvent, 0);
       } else {
