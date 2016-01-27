@@ -150,7 +150,7 @@
   <label>RecorderState: </label>
   <textarea id="recorder_state" readonly rows=1 cols=10>N/A</textarea>
   <br></br>
-  <br><strong>Recorder's Event Counters</strong></br>
+  <br><strong>Recorder's Event Counters and metrics</strong></br>
   <label>onstart: </label>
   <textarea id="onstart_count" readonly rows=1 cols=10>0</textarea>
   <label>onstop: </label>
@@ -163,6 +163,8 @@
   <textarea id="ondataavailable_count" readonly rows=1 cols=10>0</textarea>
   <label>onerror: </label>
   <textarea id="onerror_count" readonly rows=1 cols=10>0</textarea>
+  <label>bitrate: </label>
+  <textarea id ="bitrate_estimate" readonly rows=1 cols=10>N/A</textarea>
 </body>
 <script>
 
@@ -177,6 +179,7 @@ var eventsMonitored = null;
 var RECORDER_EVENTS = ['onstart', 'onpause', 'onresume', 'onstop', 'onerror'];
 var eventCounter;
 var recordedData;
+var timeDataReceived;
 
 // This function gets the selected value of a <select> element.
 function getSelectedValue(id) {
@@ -308,6 +311,7 @@ function createRecorder() {
             computeAndDisplayEventCount(ON_DATA_AVAILABLE);
             if (event.data && event.data.size > 0) {
               recordedData.push(event.data);
+              timeDataReceived.push(new Date());
             }};
         // Keep track of recorder state in UI every 500ms.
         setInterval(function() {displayRecorderState();}, 500);
@@ -323,6 +327,7 @@ function startRecorder() {
     return;
   }
   recordedData = [];
+  timeDataReceived = [];
   eventCounter = {};
   var timeSlice = getSelectedValue('time_slice');
   if (timeSlice) {
@@ -361,6 +366,7 @@ function stopRecorder() {
   }
   theRecorder.stop();
   displayRecorderState();
+  displayBitrateEstimate();
 }
 
 // This function requests a blob from media recorder.
@@ -417,9 +423,23 @@ function computeAndDisplayEventCount(eventName, initialize) {
   document.getElementById(eventName + '_count').value = eventCounter[eventName];
 }
 
-// This function displays the mnedia recoder's state.
+// This function displays the media recoder's state.
 function displayRecorderState() {
   document.getElementById('recorder_state').value = theRecorder.state;
+}
+
+// This function attempts to estimate the overall bitrate of the recording.
+// It then displays the estimate in UI.
+function displayBitrateEstimate() {
+  var dataSize = 0;
+  recordedData.forEach(function(data) {
+    dataSize += data.size;
+  });
+  var deltaTime = timeDataReceived.pop() - timeDataReceived.shift();
+  if (!deltaTime)
+    return;
+  bitrateEstimate = dataSize / deltaTime;
+  document.getElementById('bitrate_estimate').value = bitrateEstimate;
 }
 
 // This function playsback the recording.
