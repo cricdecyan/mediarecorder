@@ -303,6 +303,10 @@ function createRecorder() {
 
 // This function configurea the event handlers of media recorder.
 function monitorRecorderEvents(eventName) {
+  if (!theRecorder) {
+    console.log('No recorder initialized!');
+    return;
+  }
   if (eventsMonitored) {
     recorderEventHandlersAction('remove', eventsMonitored);
   }
@@ -320,9 +324,9 @@ function recorderEventHandlersAction(action, eventName) {
   }
   events.forEach(function(event) {
       if (action == 'remove') {
-        recorder.removeEventListener(event, displayEvent.bind(event));
+        theRecorder.removeEventListener(event, displayEvent.bind(event));
       } else {
-        recorder.addEventListener(event, displayEvent.bind(event));
+        theRecorder.addEventListener(event, displayEvent.bind(event));
       }
   });
   if (action == 'remove') {
