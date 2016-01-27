@@ -307,6 +307,7 @@ function createPeerConnection(stream) {
 function setupPeerConnection(stream) {
   return new Promise(function(resolve, reject) {
     var localStream = stream;
+    var remoteStream = null;
     var localPeerConnection = new webkitRTCPeerConnection(null);
     var remotePeerConnection = new webkitRTCPeerConnection(null);
 
@@ -346,8 +347,6 @@ function setupPeerConnection(stream) {
       remotePeerConnection.setRemoteDescription(description);
       createAnswer(description);
     });
-
-    document.getElementById("video").src = URL.createObjectURL(localStream);
   });
 }
 
