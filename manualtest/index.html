@@ -326,7 +326,7 @@ function recorderEventHandlersAction(action, eventName) {
       if (action == 'remove') {
         theRecorder[event] = null;
       } else {
-        theRecorder[event] = displayEvent.bind(null, event));
+        theRecorder[event] = displayEvent.bind(null, event);
       }
   });
   if (action == 'remove') {
