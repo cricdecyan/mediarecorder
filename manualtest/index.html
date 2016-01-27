@@ -35,10 +35,6 @@
   <button onclick="stopRemoteStream();">StopRemoteStream</button>
   <button onclick="stopRemoteVideoTrack();">StopRemoteVideoTrack</button>
   <button onclick="stopRemoteAudioTracks();">StopRemoteAudioTracks</button>
-
-
-
-
   <br></br>
   <br>Remote Peer Connection</br>
   <button onclick="setupPeerConnection();">SetUpPeerConnection</button>
@@ -173,7 +169,7 @@
 <script>
 
 'use strict';
-var theStream = null;
+var localStream = null;
 
 function getSelectedValue(id) {
   var e = document.getElementById(id);
@@ -219,7 +215,7 @@ function getUserMedia() {
  navigator.mediaDevices.getUserMedia(constraints)
     .then(function(stream) {
       document.getElementById('localVideo').src = URL.createObjectURL(stream);
-      theStream = stream;
+      localStream = stream;
     });
 }
 
@@ -283,10 +279,8 @@ function assertThrows(func, description) {
   }
 }
 
-// TODO(cpaulin): factor this method out of here, http://crbug.com/574503.
-function setupPeerConnection(stream) {
+function setupPeerConnection() {
   return new Promise(function(resolve, reject) {
-    var localStream = stream;
     var remoteStream = null;
     var localPeerConnection = new webkitRTCPeerConnection(null);
     var remotePeerConnection = new webkitRTCPeerConnection(null);
@@ -783,11 +777,11 @@ function testIllegalRequestDataThrowsDOMError() {
 // Tests that MediaRecorder fires an Error Event when the associated MediaStream
 // gets a Track added.
 function testAddingTrackToMediaStreamFiresErrorEvent() {
-  var theStream;
+  var localStream;
   var errorEventReceived = false;
   navigator.mediaDevices.getUserMedia(DEFAULT_CONSTRAINTS)
       .then(function(stream) {
-        theStream = stream;
+        localStream = stream;
         return createMediaRecorder(stream);
       })
       .then(function(recorder) {
@@ -796,7 +790,7 @@ function testAddingTrackToMediaStreamFiresErrorEvent() {
         };
         recorder.start();
         // Add a new track, copy of an existing one for simplicity.
-        theStream.addTrack(theStream.getTracks()[1].clone());
+        localStream.addTrack(localStream.getTracks()[1].clone());
       })
       .then(function() {
         return waitFor('Waiting for the Error Event',
@@ -815,11 +809,11 @@ function testAddingTrackToMediaStreamFiresErrorEvent() {
 // Tests that MediaRecorder fires an Error Event when the associated MediaStream
 // gets a Track removed.
 function testRemovingTrackFromMediaStreamFiresErrorEvent() {
-  var theStream;
+  var localStream;
   var errorEventReceived = false;
   navigator.mediaDevices.getUserMedia(DEFAULT_CONSTRAINTS)
       .then(function(stream) {
-        theStream = stream;
+        localStream = stream;
         return createMediaRecorder(stream);
       })
       .then(function(recorder) {
@@ -827,7 +821,7 @@ function testRemovingTrackFromMediaStreamFiresErrorEvent() {
           errorEventReceived = true;
         };
         recorder.start();
-        theStream.removeTrack(theStream.getTracks()[1]);
+        localStream.removeTrack(localStream.getTracks()[1]);
       })
       .then(function() {
         return waitFor('Waiting for the Error Event',
