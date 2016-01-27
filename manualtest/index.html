@@ -324,9 +324,9 @@ function recorderEventHandlersAction(action, eventName) {
   }
   events.forEach(function(event) {
       if (action == 'remove') {
-        theRecorder.removeEventListener(event, displayEvent.bind(event));
+        theRecorder[event] = null;
       } else {
-        theRecorder.addEventListener(event, displayEvent.bind(event));
+        theRecorder[event] = displayEvent.bind(null, event));
       }
   });
   if (action == 'remove') {
