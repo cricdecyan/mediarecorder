@@ -343,7 +343,7 @@ function displayEvent(eventName) {
   } else {
     eventCounter[eventName] = 1;
   }
-  document.getElementById(eventName).value = eventCounter[eventName];
+  document.getElementById(eventName + '_count').value = eventCounter[eventName];
 }
 
 function createPeerConnection(stream) {
