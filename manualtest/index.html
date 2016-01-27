@@ -438,7 +438,7 @@ function displayBitrateEstimate() {
   var deltaTime = timeDataReceived.pop() - timeDataReceived.shift();
   if (!deltaTime)
     return;
-  bitrateEstimate = dataSize / deltaTime;
+  var bitrateEstimate = dataSize / deltaTime;
   document.getElementById('bitrate_estimate').value = bitrateEstimate;
 }
 
