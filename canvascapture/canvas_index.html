@@ -163,7 +163,7 @@ function setupPeerConnection(stream) {
 
 // This function starts the canvas capture of the local video stream.
 function startCanvasCapture() {
-  theCanvasStream = theLocalStream.captureStream();
+  theCanvasStream = document.getElementById('local_video').captureStream();
   console.log('canvas capture started');
 }
 
