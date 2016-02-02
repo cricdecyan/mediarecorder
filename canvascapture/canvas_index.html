@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Canvas Capture Test (w/ MediaRecorder)</title>
+</head>
+<body>
+  <div> Canvas capture test.</div>
+  <video id="local_video" autoplay></video>
+  <video id="canvas_playback" autoplay></video>
+  <video id="remote_video" autoplay></video>
+  <br><strong>GetUserMedia Options</strong></br>
+  <label>Enable Audio</label>
+  <select id="enable_audio">
+    <option value="false">no</option>
+  </select>
+  <label>Enable Video</label>
+  <select id="enable_video">
+    <option value="true">yes</option>
+    <option value="false">no</option>
+  </select>
+  <label>Video Resolution</label>
+  <select id="resolution">
+    <option value=""></option>
+    <option value="160x120">160x120</option>
+    <option value="320x240">320x240</option>
+    <option value="640x480">640x480</option>
+    <option value="1280x720">1280x720</option>
+    <option value="1920x1080">1920x1080</option>
+  </select>
+  <br></br>
+  <button onclick="getUserMedia();">GetUSerMedia</button>
+  <br></br>
+  <br><strong>Canvas Capture Of Local Video Stream</strong></br>
+  <button onclick="startCanvasCapture();">StartCanvasCapture</button>
+  <br><strong>Local Peer Connection</strong></br>
+  <button onclick="createPeerConnection();">CreatePeerConnection</button>
+  <br></br>
+<script>
+
+'use strict';
+var theLocalStream = null;
+var theRemoteStream = null;
+var theCanvasStream = null;
+
+// This function gets the selected value of a <select> element.
+function getSelectedValue(id) {
+  var e = document.getElementById(id);
+  return e.options[e.selectedIndex].value;
+}
+
+// This function builds the basic gUM constraints from the
+// selected GetUserMedia options in html.
+function buildConstraints(audioEnabled, videoEnabled, resolution) {
+  var constraints = {audio: false, video: false};
+  var res = resolution.split('x');
+  var width = res[0];
+  var height = res[1];
+  if (height && videoEnabled) {
+    constraints.video = {mandatory: {
+      minWidth: width,
+      minHeight: height,
+      maxWidth: width,
+      maxHeight: height
+    }};
+  } else if (videoEnabled) {
+    constraints.video = true;
+  }
+
+  if (audioEnabled) {
+    constraints.audio = true;
+  }
+  return constraints;
+}
+
+// This function returns true if the string provided is equal to 'true'.
+// Otherwise it returns false.
+function isTrue(someString) {
+ if (someString == 'true') {
+   return true;
+ } else {
+   return false;
+ }
+}
+
+// This function performs a gUM request and populates the local stream as
+// well as the local_video tag.
+function getUserMedia() {
+ var enableAudio = isTrue(getSelectedValue('enable_audio'));
+ var enableVideo = isTrue(getSelectedValue('enable_video'));
+ var resolution = getSelectedValue('resolution');
+ var constraints = buildConstraints(enableAudio, enableVideo, resolution);
+
+ navigator.mediaDevices.getUserMedia(constraints)
+    .then(function(stream) {
+      document.getElementById('local_video').src = URL.createObjectURL(stream);
+      theLocalStream = stream;
+    });
+}
+
+// This function creates the local peer connection and saves the
+// remote stream object.
+function createPeerConnection() {
+  if (!theCanvasStream) {
+    alert('No canvas capture stream initialized!');
+    return;
+  }
+  setupPeerConnection(theCanvasStream)
+      .then(function(stream) {
+        theRemoteStream = stream;
+      })
+      .catch(function(error) {
+        alert('Peer Connection setup failed: ' + error);
+      });
+}
+
+// This function is called by createPeerConnection and is responsible for the
+// actual setting of the local peer connection.
+function setupPeerConnection(stream) {
+  return new Promise(function(resolve, reject) {
+    var localStream = stream;
+    var remoteStream = null;
+    var localPeerConnection = new webkitRTCPeerConnection(null);
+    var remotePeerConnection = new webkitRTCPeerConnection(null);
+
+    function createAnswer(description) {
+      remotePeerConnection.createAnswer(function(description) {
+        remotePeerConnection.setLocalDescription(description);
+        localPeerConnection.setRemoteDescription(description);
+      });
+    }
+
+    if (!localStream)
+      reject('Stream not initialized!!');
+
+    localPeerConnection.onicecandidate = function(event) {
+      if (event.candidate) {
+        remotePeerConnection.addIceCandidate(new RTCIceCandidate(
+            event.candidate));
+      }
+    };
+    remotePeerConnection.onicecandidate = function(event) {
+      if (event.candidate) {
+        localPeerConnection.addIceCandidate(new RTCIceCandidate(
+            event.candidate));
+      }
+    };
+    remotePeerConnection.onaddstream = function(event) {
+      document.getElementById('remote_video').src = URL.createObjectURL(
+          event.stream);
+      remoteStream = event.stream;
+      resolve(remoteStream);
+    };
+
+    localPeerConnection.addStream(localStream);
+
+    localPeerConnection.createOffer(function(description) {
+      localPeerConnection.setLocalDescription(description);
+      remotePeerConnection.setRemoteDescription(description);
+      createAnswer(description);
+    });
+  });
+}
+
+// This function starts the canvas capture of the local video stream.
+function startCanvasCapture() {
+  theCanvasStream = theLocalStream.captureStream();
+  console.log('canvas capture started');
+}
+
+</script>
+</body>
+</html>
