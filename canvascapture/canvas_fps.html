@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Canvas Capture Test</title>
+</head>
+<body>
+  <div> Canvas capture test.</div>
+  <video id='local_video' muted='true' hidden autoplay>
+    <source src='big-buck-bunny_trailer.webm' type='video/webm'/>
+  </video>
+  <br></br>
+  <label>Canvas</label>
+  <canvas id='canvas' width=640 height=360></canvas>
+  <br></br>
+  <label>Captured canvas stream</label>
+  <video id='captured_video' autoplay></video>
+  <br><strong>Canvas Capture Of Local Video Stream</strong></br>
+  <button onclick='startCanvasCapture();'>StartCanvasCapture</button>
+  <br></br>
+  <div id='log'>
+      Decoded frames: 0 Avg: 0<br>
+      Dropped frames: 0 Avg: 0<br>
+  </div>
+<script>
+
+'use strict';
+var theCanvasStream = null;
+var decodedFrames;
+var droppedFrames;
+var decodedFPS;
+var droppedFPS;
+var startTime;
+var interval;
+
+// This function starts the canvas capture of the local video stream.
+function startCanvasCapture() {
+  theCanvasStream = document.getElementById('canvas').captureStream(10);
+  var testVideo = document.getElementById('captured_video');
+  testVideo.addEventListener('play', function(event) {
+      console.log('Inside event listener');
+      decodedFrames = 0;
+      droppedFrames = 0;
+      decodedFPS = [];
+      droppedFPS = [];
+      startTime = new Date().getTime();
+      interval = setInterval(calculateStats.bind(null, testVideo, 'log'),
+         1000);
+    });
+  testVideo.addEventListener('error', function() {clearInterval(interval);});
+  testVideo.src = URL.createObjectURL(theCanvasStream);
+  console.log('canvas capture started');
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    var video = document.getElementById('local_video');
+    var canvas = document.getElementById('canvas');
+    var context = canvas.getContext('2d');
+    video.addEventListener('play', function() {
+      draw(this, context, canvas.clientWidth, canvas.clientHeight);
+    }, false);
+
+  }, false);
+
+function draw(video, context, width, height) {
+    if (video.paused || video.ended) return false;
+    context.drawImage(video, 0, 0, width, height);
+    setTimeout(draw, 20, video, context, width, height);
+}
+
+function calculateStats(video, tag) {
+  if (video.readyState <= HTMLMediaElement.HAVE_CURRENT_DATA ||
+      video.paused || video.ended)
+    return;
+  var currentTime = new Date().getTime();
+  var deltaTime = (currentTime - startTime) / 1000;
+  // We calculate stats on 5 seconds worth of video, that should be
+  // reasonable.
+  if (decodedFPS.length > 5) {
+    clearInterval(interval);
+  }
+  startTime = currentTime;
+
+  // Calculate decoded frames per sec.
+  var fps = (video.webkitDecodedFrameCount - decodedFrames) / deltaTime;
+  decodedFrames = video.webkitDecodedFrameCount;
+  decodedFPS.push(fps);
+
+  // Calculate dropped frames per sec.
+  fps = (video.webkitDroppedFrameCount - droppedFrames) / deltaTime;
+  droppedFrames = video.webkitDroppedFrameCount;
+  droppedFPS.push(fps);
+
+  var log = document.getElementById(tag);
+  log.innerHTML =
+    'Decoded frames: ' + decodedFrames +
+    ' Avg: ' + decodedFPS + ' fps.<br>' +
+    'Dropped frames: ' + droppedFrames +
+    ' Avg: ' + droppedFPS + ' fps.<br>';
+}
+
+</script>
+</body>
+</html>
