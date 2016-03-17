@@ -204,7 +204,6 @@ function buildConstraints(audioEnabled, videoEnabled, resolution) {
   } else if (videoEnabled) {
     constraints.video = true;
   }
-
   if (audioEnabled) {
     constraints.audio = true;
   }
@@ -289,7 +288,6 @@ function buildRecorderConfig() {
   }
   return [stream, options];
 }
-
 
 // This function creates the media recorder instance, configures the
 // ignoreMutedMedia parameter and sets a handler to save the recording.
@@ -471,6 +469,7 @@ function download() {
     window.URL.revokeObjectURL(url);
   }, 100);
 }
+
 // This function creates the local peer connection and saves the
 // remote stream object.
 function createPeerConnection(stream) {
@@ -531,10 +530,9 @@ function setupPeerConnection(stream) {
       localPeerConnection.setLocalDescription(description);
       remotePeerConnection.setRemoteDescription(description);
       createAnswer(description);
-    }, function(error) { failTest(error.toString()); });
+    }, function(error) { alert(error.toString()); });
   });
 }
-
 
 // This function creates a media recorder instance.
 function createMediaRecorderInstance(stream, options) {
