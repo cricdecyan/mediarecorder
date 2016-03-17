@@ -500,7 +500,7 @@ function setupPeerConnection(stream) {
       remotePeerConnection.createAnswer(function(description) {
         remotePeerConnection.setLocalDescription(description);
         localPeerConnection.setRemoteDescription(description);
-      });
+      }, function(error) { alert(error.toString()); });
     }
 
     if (!localStream)
@@ -531,7 +531,7 @@ function setupPeerConnection(stream) {
       localPeerConnection.setLocalDescription(description);
       remotePeerConnection.setRemoteDescription(description);
       createAnswer(description);
-    });
+    }, function(error) { failTest(error.toString()); });
   });
 }
 
